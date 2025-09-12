@@ -1,6 +1,6 @@
-#include "Pokedex.hpp"
-#include "PokemonParty.hpp"
-#include "PokemonAttack.hpp"
+#include "../pokemon/PokemonStorage/Pokedex.hpp"
+#include "../pokemon/PokemonBat/PokemonParty.hpp"
+#include "../pokemon/PokemonBat/PokemonAttack.hpp"
 #include <iostream>
 #include <vector>
 
