@@ -5,7 +5,7 @@
 #include <vector>
 
 Pokedex::Pokedex() {
-    load_from_csv("pokedex.csv");
+    load_from_csv("../pokedex.csv");
 }
 
 Pokedex& Pokedex::get_instance() {
@@ -72,10 +72,6 @@ void Pokedex::load_from_csv(const std::string& filename) {
         }
     }
     file.close();
-}
-
-void Pokedex::add_pokemon(const Pokemon& pokemon) {
-    pokemons_.push_back(pokemon);
 }
 
 const Pokemon* Pokedex::get_pokemon(int index) const {

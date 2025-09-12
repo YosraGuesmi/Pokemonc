@@ -1,6 +1,8 @@
 #include "Pokemon.hpp"
 #include <cstdlib>
 #include <ctime>
+#include <ostream>
+#include <iostream>
 
 Pokemon::Pokemon(int id, const std::string& name, int evolution, int max_hp, int attack, int defense)
     : id_(id), name_(name), evolution_(evolution), max_hp_(max_hp), current_hp_(max_hp),
@@ -16,9 +18,13 @@ int Pokemon::get_current_hp() const { return current_hp_; }
 int Pokemon::get_attack() const { return attack_; }
 int Pokemon::get_defense() const { return defense_; }
 
+
+// j'ai arrangé la logique pour faire en sorte que les points de vie ne soient pas négatifs
 int Pokemon::attack(Pokemon& other) {
     int damage = (attack_ - other.defense_ / 2) + (std::rand() % 5);
-    if (damage < 0) damage = 0;
     other.current_hp_ = (other.current_hp_ - damage > 0) ? other.current_hp_ - damage : 0;
+    if (other.current_hp_ < 0) other.current_hp_ = 0;
+    if (other.current_hp_ == 0) std::cout << other.get_name() << " est mort" << std::endl;
+
     return damage;
 }

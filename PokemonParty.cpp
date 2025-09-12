@@ -1,9 +1,5 @@
 #include "PokemonParty.hpp"
 
-void PokemonParty::add_pokemon(const Pokemon& pokemon) {
-    pokemons_.push_back(pokemon);
-}
-
 const Pokemon* PokemonParty::get_pokemon(int index) const {
     if (index >= 0 && static_cast<size_t>(index) < pokemons_.size()) {
         return &pokemons_[index];

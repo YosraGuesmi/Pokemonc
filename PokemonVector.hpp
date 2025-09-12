@@ -7,7 +7,7 @@
 class PokemonVector {
 public:
     virtual ~PokemonVector() = default;
-    virtual void add_pokemon(const Pokemon& pokemon) = 0;
+    virtual void add_pokemon(const Pokemon& pokemon);
     virtual const Pokemon* get_pokemon(int index) const = 0;
     virtual size_t size() const = 0;
 

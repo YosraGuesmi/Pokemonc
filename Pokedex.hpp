@@ -9,7 +9,6 @@ public:
     static Pokedex& get_instance();
     Pokedex(const Pokedex&) = delete;
     Pokedex& operator=(const Pokedex&) = delete;
-    void add_pokemon(const Pokemon& pokemon) override;
     const Pokemon* get_pokemon(int index) const override;
     size_t size() const override { return pokemons_.size(); }
     Pokemon* clone_pokemon(int id);
