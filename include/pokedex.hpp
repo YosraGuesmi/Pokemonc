@@ -9,9 +9,8 @@
 class Pokedex {
 public:
     static Pokedex& getInstance();
-    static void destroyInstance(); // Added to fix compilation error
+    static void destroyInstance();
     ~Pokedex();
-
     Pokemon* clone(int num) const;
     size_t size() const { return pokemons.size(); }
 

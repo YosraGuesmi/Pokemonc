@@ -4,7 +4,7 @@
 
 BattleSystem::BattleSystem(std::vector<Pokemon*>& playerTeam, PokemonParty& opponentTeam, sf::Font& font)
     : playerTeam(playerTeam), font(font), selectedAttack(-1), playerTurn(true), battleOver(false) {
-    // Initialiser l'équipe adverse
+
     for (int i = 0; i < 6; ++i) {
         if (auto p = opponentTeam.get(i)) {
             this->opponentTeam.push_back(p);
@@ -15,10 +15,10 @@ BattleSystem::BattleSystem(std::vector<Pokemon*>& playerTeam, PokemonParty& oppo
     currentPlayerIndex = 0;
     currentOpponentIndex = 0;
 
-    // Initialiser la table des types
+
     initializeTypeChart();
 
-    // Initialiser l'interface graphique
+
     battleMessageText.setFont(font);
     battleMessageText.setCharacterSize(20);
     battleMessageText.setFillColor(sf::Color::White);
@@ -26,7 +26,6 @@ BattleSystem::BattleSystem(std::vector<Pokemon*>& playerTeam, PokemonParty& oppo
     battleMessageText.setOutlineThickness(1.0f);
     battleMessageText.setPosition(20.f, 500.f);
 
-    // Boutons pour les attaques factices
     std::vector<std::string> dummyAttacks = {"Attaque1", "Attaque2", "Attaque3", "Attaque4"};
     for (size_t i = 0; i < dummyAttacks.size(); ++i) {
         sf::Text button;
@@ -40,7 +39,6 @@ BattleSystem::BattleSystem(std::vector<Pokemon*>& playerTeam, PokemonParty& oppo
         attackButtons.push_back(button);
     }
 
-    // Barres de PV
     playerHPBar.setSize(sf::Vector2f(200.f, 20.f));
     playerHPBar.setFillColor(sf::Color::Green);
     playerHPBar.setPosition(20.f, 300.f);
@@ -62,7 +60,7 @@ BattleSystem::BattleSystem(std::vector<Pokemon*>& playerTeam, PokemonParty& oppo
 }
 
 void BattleSystem::initializeTypeChart() {
-    // Table des types simplifiée
+
     typeChart["Feu"]["Plante"] = 2.0f;
     typeChart["Feu"]["Eau"] = 0.5f;
     typeChart["Eau"]["Feu"] = 2.0f;
@@ -80,12 +78,12 @@ float BattleSystem::getTypeMultiplier(const std::string& attackType, const std::
 }
 
 float BattleSystem::calculateDamage(Pokemon* attacker, Pokemon* defender, const Attack& attack) {
-    // Formule simplifiée
+
     float baseDamage = ((2 * 50 / 5 + 2) * attack.power * attacker->getAttaque() / defender->getDefense()) / 50 + 2;
-    // Type par défaut (à remplacer par getType() si ajouté à Pokemon)
+
     std::string defenderType = "Normal";
     float typeMultiplier = getTypeMultiplier(attack.type, defenderType);
-    float randomFactor = (std::rand() % 16 + 85) / 100.0f; // Entre 0.85 et 1.0
+    float randomFactor = (std::rand() % 16 + 85) / 100.0f;
     return baseDamage * typeMultiplier * randomFactor;
 }
 
@@ -117,9 +115,8 @@ void BattleSystem::applyDamage(Pokemon* target, float damage) {
 }
 
 void BattleSystem::selectOpponentAction(int& action, int& attackIndex) {
-    // IA simple : choisit une attaque aléatoire
-    action = 0; // 0 = attaquer
-    attackIndex = std::rand() % 4; // Simuler 4 attaques
+    action = 0;
+    attackIndex = std::rand() % 4;
 }
 
 void BattleSystem::processTurn(int playerAction, int attackIndex) {
@@ -129,11 +126,10 @@ void BattleSystem::processTurn(int playerAction, int attackIndex) {
     int opponentAction, opponentAttackIndex;
     selectOpponentAction(opponentAction, opponentAttackIndex);
 
-    // Attaques factices
     Attack dummyAttack("Attaque" + std::to_string(attackIndex + 1), "Feu", 50);
     Attack dummyOpponentAttack("Attaque" + std::to_string(opponentAttackIndex + 1), "Eau", 50);
 
-    // Simplification : le joueur attaque toujours en premier
+
     bool playerFirst = true;
 
     auto executeAction = [&](Pokemon* attacker, Pokemon* defender, int action, int attackIdx, const Attack& attack) {
@@ -141,8 +137,8 @@ void BattleSystem::processTurn(int playerAction, int attackIndex) {
             float damage = calculateDamage(attacker, defender, attack);
             applyDamage(defender, damage);
             battleMessage += attacker == activePlayerPokemon ? "Votre " : "Le ";
-            battleMessage += "Pokémon utilise " + attack.name + " ! ";
-            std::string defenderType = "Normal"; // À remplacer par getType() si ajouté
+            battleMessage += "Pokemon utilise " + attack.name + " ! ";
+            std::string defenderType = "Normal";
             float typeMultiplier = getTypeMultiplier(attack.type, defenderType);
             if (typeMultiplier > 1.0f) battleMessage += "C'est super efficace ! ";
             else if (typeMultiplier < 1.0f && typeMultiplier > 0.0f) battleMessage += "Ce n'est pas très efficace... ";
@@ -162,7 +158,7 @@ void BattleSystem::processTurn(int playerAction, int attackIndex) {
 }
 
 void BattleSystem::render(sf::RenderWindow& window, const std::map<int, sf::Texture>& textures) {
-    // Afficher les Pokémon
+
     if (activePlayerPokemon) {
         sf::Sprite playerSprite(textures.at(activePlayerPokemon->getNumero()));
         playerSprite.setPosition(50.f, 350.f);
@@ -176,7 +172,7 @@ void BattleSystem::render(sf::RenderWindow& window, const std::map<int, sf::Text
         window.draw(opponentSprite);
     }
 
-    // Afficher les barres de PV
+
     if (activePlayerPokemon) {
         float hpRatio = static_cast<float>(activePlayerPokemon->getPvActuel()) / activePlayerPokemon->getPvMax();
         playerHPBar.setSize(sf::Vector2f(200.f * hpRatio, 20.f));
@@ -194,7 +190,7 @@ void BattleSystem::render(sf::RenderWindow& window, const std::map<int, sf::Text
         window.draw(opponentHPText);
     }
 
-    // Afficher les boutons d'attaque
+
     for (size_t i = 0; i < attackButtons.size(); ++i) {
         if (static_cast<int>(i) == selectedAttack) {
             attackButtons[i].setFillColor(sf::Color::Yellow);
@@ -204,7 +200,7 @@ void BattleSystem::render(sf::RenderWindow& window, const std::map<int, sf::Text
         window.draw(attackButtons[i]);
     }
 
-    // Afficher le message de combat
+
     battleMessageText.setString(battleMessage);
     window.draw(battleMessageText);
 }

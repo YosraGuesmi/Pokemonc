@@ -11,6 +11,26 @@ set(SOURCES
         src/pokemon_party.cpp
         src/pokemon_attack.cpp
         main.cpp
+        include/GameContext.hpp
+        include/state.hpp
+        include/ExplorationState.hpp
+        include/AccueilState.hpp
+        src/GameContext.cpp
+        src/state.cpp
+        src/ExplorationState.cpp
+        src/AccueilState.cpp
+        include/RencontreState.hpp
+        src/RencontreState.cpp
+        include/CaptureSuccesState.hpp
+        src/CaptureSuccesState.cpp
+        include/CombatState.hpp
+        src/CombatState.cpp
+        include/GameOverState.hpp
+        src/GameOverState.cpp
+        include/BattleState.hpp
+        src/BattleState.cpp
+        include/BattleSystem.hpp
+        src/BattleSystem.cpp
 )
 
 # Définir les fichiers en-têtes (optionnel pour l'IDE)

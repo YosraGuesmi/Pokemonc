@@ -40,7 +40,7 @@ void ExplorationState::handleInput(GameContext& context, sf::Event event) {
                 context.getAttack()->add(context.getDraggedPokemon());
             }
         }
-        delete context.getDraggedPokemon(); // Libérer la mémoire
+        delete context.getDraggedPokemon();
         context.setDraggedPokemon(nullptr);
         *context.getDragIndex() = -1;
     } else if (event.type == sf::Event::MouseWheelScrolled) {

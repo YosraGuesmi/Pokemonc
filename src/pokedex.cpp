@@ -14,44 +14,44 @@ Pokedex::Pokedex() {
     }
 
     std::string line;
-    std::getline(file, line); // Skip header line
+    std::getline(file, line);
 
     while (std::getline(file, line)) {
         std::stringstream ss(line);
         std::string token;
         std::vector<std::string> tokens;
 
-        // Parse CSV line
+
         while (std::getline(ss, token, ',')) {
-            // Trim whitespace
+
             token.erase(0, token.find_first_not_of(" \t"));
             token.erase(token.find_last_not_of(" \t") + 1);
             tokens.push_back(token);
         }
 
-        // Expect exactly 13 columns
+
         if (tokens.size() != 13) {
             std::cerr << "Ligne ignorée (mauvais nombre de colonnes) : " << line << std::endl;
             continue;
         }
 
         try {
-            // Map CSV columns to Pokemon fields
-            int num = std::stoi(tokens[0]);      // # (Pokémon ID)
-            std::string nom = tokens[1];         // Name
-            int evo = std::stoi(tokens[11]);     // Generation (adjust if meant to be evolution stage)
-            int pvM = std::stoi(tokens[5]);      // HP (max HP)
-            int pvA = std::stoi(tokens[5]);      // Current HP (same as max HP initially)
-            int atk = std::stoi(tokens[6]);      // Attack
-            int def = std::stoi(tokens[7]);      // Defense
 
-            // Validate values
+            int num = std::stoi(tokens[0]);
+            std::string nom = tokens[1];
+            int evo = std::stoi(tokens[11]);
+            int pvM = std::stoi(tokens[5]);
+            int pvA = std::stoi(tokens[5]);
+            int atk = std::stoi(tokens[6]);
+            int def = std::stoi(tokens[7]);
+
+
             if (pvM <= 0 || pvA < 0 || pvA > pvM || atk < 0 || def < 0) {
                 std::cerr << "Valeurs invalides pour " << nom << " : pvM=" << pvM << ", pvA=" << pvA << ", atk=" << atk << ", def=" << def << std::endl;
                 continue;
             }
 
-            // Create and store Pokemon
+
             Pokemon* p = new Pokemon(num, nom, evo, pvM, pvA, atk, def);
             pokemons.push_back(p);
             lookup[num] = p;
@@ -100,6 +100,6 @@ Pokemon* Pokedex::clone(int num) const {
         std::cerr << "Pokémon #" << num << " non trouvé dans le Pokedex" << std::endl;
         return nullptr;
     }
-    // Assuming Pokemon has a copy constructor
+
     return new Pokemon(*(it->second));
 }

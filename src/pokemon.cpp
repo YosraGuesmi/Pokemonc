@@ -2,7 +2,7 @@
 #include <algorithm>
 
 Pokemon::Pokemon(int num, const std::string& n, int evo, int pvM, int pvA, int atk, int def)
-    : numero(num), nom(n), evolution(evo), pv_max(pvM), pv_actuel(pvA), attaque_points(atk), defense(def) {  // Renommé
+    : numero(num), nom(n), evolution(evo), pv_max(pvM), pv_actuel(pvA), attaque_points(atk), defense(def) {
     pv_actuel = std::clamp(pv_actuel, 0, pv_max);
 }
 

@@ -8,11 +8,11 @@ void CaptureSuccesState::handleInput(GameContext& context, sf::Event event) {
 }
 
 void CaptureSuccesState::update(GameContext& context) {
-    // Logique de mise à jour si nécessaire
+
 }
 
 void CaptureSuccesState::render(GameContext& context, sf::RenderWindow& window) {
-    window.clear(sf::Color::Yellow); // Couleur d'exemple
+    window.clear(sf::Color::Yellow);
     if (context.getFont() && context.getMainText()) {
         window.draw(*context.getMainText());
     }

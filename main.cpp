@@ -2,46 +2,55 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include "../PokemonProject/include/pokedex.hpp"
-#include "../PokemonProject/include/pokemon_party.hpp"
-#include "../PokemonProject/include/pokemon_attack.hpp"
+#include <random>
+#include "include/pokedex.hpp"
+#include "include/pokemon_party.hpp"
+#include "include/pokemon_attack.hpp"
+#include "BattleSystem.hpp"
 #include <map>
 #include <string>
+#include <algorithm>
 
 int main() {
     try {
-        // Initialize Pokedex and verify loading
         auto& dex = Pokedex::getInstance();
-        std::cout << "Pokedex size: " << dex.size() << " Pokémon loaded." << std::endl;
+        std::cout << "Pokedex size: " << dex.size() << " Pokemon loaded." << std::endl;
 
-        // Setup window
         sf::RenderWindow window(sf::VideoMode(800, 600), "Pokemon Selector");
         window.setFramerateLimit(60);
 
-        // Initialize party with Pokémon 1-12
         PokemonParty party;
-        for (int i = 1; i <= 12; ++i) {
+        for (int i = 1; i <= static_cast<int>(dex.size()); ++i) {
             if (auto p = dex.clone(i)) {
                 party.add(p);
-                std::cout << "Added Pokémon #" << i << " to party." << std::endl;
             } else {
-                std::cerr << "Failed to clone Pokémon #" << i << std::endl;
+                std::cerr << "Failed to clone Pokemon #" << i << std::endl;
             }
         }
-        std::cout << "Party size: " << party.size() << std::endl;
+        std::cout << "Party size: " << party.size() << " (all Pokemon loaded for grid)." << std::endl;
 
-        PokemonAttack* attack = new PokemonAttack();
+        std::vector<Pokemon*> selectedPokemon;
+        const int MAX_SELECTION = 6;
 
-        // Texture cache for sprites
+        PokemonParty opponentParty;
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis(1, static_cast<int>(dex.size()));
+        for (int i = 0; i < 6; ++i) {
+            if (auto p = dex.clone(dis(gen))) {
+                opponentParty.add(p);
+            }
+        }
+
         std::map<int, sf::Texture> textures;
         auto loadTexture = [&](int num) -> sf::Texture& {
             if (textures.find(num) == textures.end()) {
                 sf::Texture tex;
-                std::string path = "data/images/pokemon_" + std::to_string(num) + ".png";
+                std::string path = "/mnt/c/Users/guesm/CLionProjects/Pokemon_Copie1/data/images/" + std::to_string(num) + ".png";
                 if (!tex.loadFromFile(path)) {
                     std::cerr << "Failed to load texture: " << path << ", using fallback." << std::endl;
                     sf::Image img;
-                    img.create(64, 64, sf::Color::Green);
+                    img.create(80, 80, sf::Color::Magenta);
                     tex.loadFromImage(img);
                 }
                 textures[num] = tex;
@@ -49,173 +58,471 @@ int main() {
             return textures[num];
         };
 
-        // Load font with multiple fallbacks
         sf::Font font;
         std::vector<std::string> fontPaths = {
-            "data/arial.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf"
+            "data/arial.ttf"
         };
         bool fontLoaded = false;
         for (const auto& path : fontPaths) {
             if (font.loadFromFile(path)) {
-                std::cout << "Loaded font: " << path << std::endl;
                 fontLoaded = true;
                 break;
             }
         }
-        if (!fontLoaded) {
-            std::cerr << "Erreur: Aucune police trouvée. Le texte ne sera pas affiché." << std::endl;
+
+        sf::Texture backgroundTexture;
+        if (!backgroundTexture.loadFromFile("/mnt/c/Users/guesm/CLionProjects/Pokemon_Copie1/data/images/background.png")) {
+            std::cerr << "Failed to load background texture, using fallback color." << std::endl;
         }
 
-        // Setup welcome text
         std::vector<sf::Text> glassTextLayers;
-        const std::string message = "you wanna play pokemon";
-        const int fontSize = 50;
-
         sf::Text mainText;
+        sf::Text selectionText;
         if (fontLoaded) {
             mainText.setFont(font);
-            mainText.setString(message);
-            mainText.setCharacterSize(fontSize);
+            mainText.setCharacterSize(50);
             mainText.setFillColor(sf::Color(255, 255, 255, 200));
             mainText.setOutlineColor(sf::Color(100, 200, 255, 255));
             mainText.setOutlineThickness(3.0f);
             mainText.setStyle(sf::Text::Bold);
 
+            selectionText.setFont(font);
+            selectionText.setCharacterSize(30);
+            selectionText.setFillColor(sf::Color::White);
+            selectionText.setOutlineColor(sf::Color::Black);
+            selectionText.setOutlineThickness(1.0f);
+            selectionText.setPosition(20.f, 20.f);
+
             for (int i = 0; i < 4; ++i) {
-                sf::Text layer(message, font, fontSize);
+                sf::Text layer("", font, 50);
                 layer.setFillColor(sf::Color(150, 200, 255, 50));
                 layer.setStyle(sf::Text::Bold);
                 glassTextLayers.push_back(layer);
             }
-
-            // Center text
-            sf::FloatRect textRect = mainText.getLocalBounds();
-            mainText.setOrigin(textRect.left + textRect.width / 2.0f, textRect.height / 2.0f);
-            mainText.setPosition(400.0f, 300.0f);
-
-            glassTextLayers[0].setPosition(402.0f, 302.0f);
-            glassTextLayers[1].setPosition(398.0f, 298.0f);
-            glassTextLayers[2].setPosition(400.0f, 302.0f);
-            glassTextLayers[3].setPosition(402.0f, 298.0f);
         }
 
-        // Animation variables
         sf::Clock animationClock;
         float pulse = 1.0f;
         sf::Vector2i mousePos;
-        int selectedPartyIndex = -1;
-        int selectedAttackIndex = -1;
         sf::Clock welcomeClock;
         bool showWelcome = true;
+        bool selectionComplete = false;
+        bool showSelectedView = false;
+        bool battleMode = false;
+        bool showTooltip = false;
+        bool showBattlePage = false;
+        BattleSystem* battleSystem = nullptr;
 
-        // Remove console input to avoid blocking
-        // std::cout << "Appuyez sur Entrée pour continuer ou voir les erreurs..." << std::endl;
-        // std::cin.get();
+        float scrollOffset = 0.0f;
+        const float scrollSpeed = 100.0f;
+        const int COLS_PER_ROW = 5;
+        const int POKEMON_SIZE = 120.f;
+        const int FRAME_SIZE = 160.f;
+
+        sf::Text tooltip;
+        sf::Text playerPokemonText;
+        sf::Text opponentPokemonText;
+        if (fontLoaded) {
+            tooltip.setFont(font);
+            tooltip.setCharacterSize(20);
+            tooltip.setFillColor(sf::Color::White);
+            tooltip.setOutlineColor(sf::Color::Black);
+            tooltip.setOutlineThickness(1.0f);
+
+            playerPokemonText.setFont(font);
+            playerPokemonText.setCharacterSize(20);
+            playerPokemonText.setFillColor(sf::Color::White);
+            playerPokemonText.setOutlineColor(sf::Color::Black);
+            playerPokemonText.setOutlineThickness(1.0f);
+            playerPokemonText.setPosition(20.f, 320.f);
+
+            opponentPokemonText.setFont(font);
+            opponentPokemonText.setCharacterSize(20);
+            opponentPokemonText.setFillColor(sf::Color::White);
+            opponentPokemonText.setOutlineColor(sf::Color::Black);
+            opponentPokemonText.setOutlineThickness(1.0f);
+            opponentPokemonText.setPosition(580.f, 70.f);
+        }
+
+        sf::RectangleShape battleBackground(sf::Vector2f(760.f, 300.f));
+        battleBackground.setPosition(20.f, 20.f);
+        battleBackground.setFillColor(sf::Color(0, 0, 0, 100));
+        battleBackground.setOutlineColor(sf::Color::White);
+        battleBackground.setOutlineThickness(2.f);
+
+        Pokemon* draggedPokemon = nullptr;
+        sf::Vector2f dragOffset;
+        bool isDragging = false;
+        int dragIndex = -1;
 
         while (window.isOpen()) {
             sf::Event event;
+            mousePos = sf::Mouse::getPosition(window);
+            sf::Vector2f worldMousePos(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
+
             while (window.pollEvent(event)) {
                 if (event.type == sf::Event::Closed) {
                     window.close();
-                } else if (event.type == sf::Event::MouseButtonPressed && !showWelcome) {
-                    mousePos = sf::Mouse::getPosition(window);
-                    if (mousePos.x < 400) {
-                        selectedPartyIndex = static_cast<int>(mousePos.y / 80);
-                        if (selectedPartyIndex >= 0 && static_cast<size_t>(selectedPartyIndex) < party.size()) {
-                            auto p = party.remove(selectedPartyIndex);
-                            if (p) {
-                                attack->add(p);
-                                std::cout << "Moved Pokémon to attack slot." << std::endl;
-                            }
-                        }
-                    } else {
-                        selectedAttackIndex = static_cast<int>(mousePos.y / 80);
-                        if (selectedAttackIndex >= 0 && selectedAttackIndex < 6) {
-                            auto p = attack->remove(selectedAttackIndex);
-                            if (p) {
-                                party.add(p);
-                                std::cout << "Moved Pokémon back to party." << std::endl;
-                            }
-                        }
-                    }
                 } else if (event.type == sf::Event::KeyPressed && showWelcome) {
-                    if (event.key.code == sf::Keyboard::Space) {
-                        showWelcome = false;
-                        std::cout << "Welcome screen dismissed." << std::endl;
+                    if (event.key.code == sf::Keyboard::Space) showWelcome = false;
+                } else if (!showWelcome && !selectionComplete && !showSelectedView && !battleMode && !showBattlePage) {
+                    if (event.type == sf::Event::MouseWheelScrolled) {
+                        if (event.mouseWheelScroll.wheel == sf::Mouse::VerticalWheel) {
+                            scrollOffset -= event.mouseWheelScroll.delta * scrollSpeed;
+                        }
+                    }
+                    if (event.type == sf::Event::KeyPressed) {
+                        if (event.key.code == sf::Keyboard::Up) scrollOffset -= scrollSpeed;
+                        if (event.key.code == sf::Keyboard::Down) scrollOffset += scrollSpeed;
+                    }
+                    int numRows = (party.size() + COLS_PER_ROW - 1) / COLS_PER_ROW;
+                    float totalHeight = static_cast<float>(numRows * FRAME_SIZE);
+                    scrollOffset = std::max(0.0f, std::min(scrollOffset, std::max(0.0f, totalHeight - 600.0f)));
+                    if (event.type == sf::Event::MouseButtonPressed) {
+                        int col = static_cast<int>(mousePos.x / FRAME_SIZE);
+                        int row = static_cast<int>((mousePos.y + scrollOffset) / FRAME_SIZE);
+                        int adjustedIndex = row * COLS_PER_ROW + col;
+                        if (adjustedIndex >= 0 && static_cast<size_t>(adjustedIndex) < party.size()) {
+                            auto p = party.get(adjustedIndex);
+                            if (p) {
+                                auto it = std::find(selectedPokemon.begin(), selectedPokemon.end(), p);
+                                if (it != selectedPokemon.end()) {
+                                    selectedPokemon.erase(it);
+                                    std::cout << "Deselected Pokemon #" << p->getNumero() << std::endl;
+                                } else if (selectedPokemon.size() < MAX_SELECTION) {
+                                    selectedPokemon.push_back(p);
+                                    std::cout << "Selected Pokemon #" << p->getNumero() << std::endl;
+                                    loadTexture(p->getNumero());
+                                } else {
+                                    std::cout << "Maximum 6 Pokemon selected. Deselect one first." << std::endl;
+                                }
+                            }
+                        }
+                    }
+                    if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Return && selectedPokemon.size() == MAX_SELECTION) {
+                        selectionComplete = true;
+                        showSelectedView = true;
+                        std::cout << "Selection complete! Showing 6 chosen Pokemon." << std::endl;
+                    }
+                } else if (showSelectedView && event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Space) {
+                    showSelectedView = false;
+                    battleMode = true;
+                    for (int i = 0; i < 6; ++i) {
+                        if (auto p = opponentParty.get(i)) {
+                            loadTexture(p->getNumero());
+                        }
+                    }
+                    battleSystem = new BattleSystem(selectedPokemon, opponentParty, font);
+                    std::cout << "Battle mode activated with selected team." << std::endl;
+                } else if (showBattlePage && event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Space) {
+                    showBattlePage = false;
+                    battleMode = false;
+                    delete battleSystem;
+                    battleSystem = nullptr;
+                } else if (battleMode && event.type == sf::Event::MouseButtonPressed && battleSystem) {
+                    for (size_t i = 0; i < battleSystem->getAttackButtons().size(); ++i) {
+                        sf::FloatRect bounds = battleSystem->getAttackButtons()[i].getGlobalBounds();
+                        if (bounds.contains(worldMousePos)) {
+                            battleSystem->processTurn(0, i);
+                            break;
+                        }
                     }
                 }
             }
 
-            // Auto-dismiss welcome screen after 3 seconds
-            if (showWelcome && welcomeClock.getElapsedTime().asSeconds() >= 3.0f) {
-                showWelcome = false;
-                std::cout << "Welcome screen auto-dismissed." << std::endl;
-            }
-
-            // Animation pulse
-            pulse = 0.95f + 0.05f * std::sin(animationClock.getElapsedTime().asSeconds() * 2.0f);
-            if (fontLoaded) {
-                mainText.setScale(pulse, pulse);
-                for (auto& layer : glassTextLayers) {
-                    layer.setScale(pulse, pulse);
-                }
-            }
-
-            window.clear(sf::Color::Black);
-
-            if (showWelcome) {
-                if (fontLoaded) {
-                    for (const auto& layer : glassTextLayers) {
-                        window.draw(layer);
+            if (!showWelcome && !selectionComplete && !showSelectedView && !battleMode && !showBattlePage && fontLoaded) {
+                int col = static_cast<int>(mousePos.x / FRAME_SIZE);
+                int row = static_cast<int>((mousePos.y + scrollOffset) / FRAME_SIZE);
+                int adjustedIndex = row * COLS_PER_ROW + col;
+                if (adjustedIndex >= 0 && static_cast<size_t>(adjustedIndex) < party.size()) {
+                    auto p = party.get(adjustedIndex);
+                    if (p) {
+                        tooltip.setString("Pokemon #" + std::to_string(p->getNumero()) + " " + p->getNom() + " (cliquez pour toggle)");
+                        sf::FloatRect tooltipRect = tooltip.getLocalBounds();
+                        tooltip.setPosition(static_cast<float>(mousePos.x - tooltipRect.width / 2), static_cast<float>(mousePos.y - 40.f));
+                        showTooltip = true;
+                    } else {
+                        showTooltip = false;
                     }
-                    window.draw(mainText);
                 } else {
-                    // Draw a fallback rectangle if font fails
-                    sf::RectangleShape fallback(sf::Vector2f(200, 50));
-                    fallback.setPosition(300, 275);
-                    fallback.setFillColor(sf::Color::Red);
-                    window.draw(fallback);
+                    showTooltip = false;
                 }
             } else {
-                // Draw party
-                for (size_t i = 0; i < party.size(); ++i) {
-                    auto p = party.get(static_cast<int>(i));
-                    if (p) {
-                        sf::Sprite sprite(loadTexture(p->getNumero()));
-                        sprite.setPosition(50.f, 50.f + static_cast<float>(i * 80));
-                        sprite.setScale(2.f, 2.f);
-                        window.draw(sprite);
+                showTooltip = false;
+            }
+
+            if (showWelcome && welcomeClock.getElapsedTime().asSeconds() >= 3.0f) showWelcome = false;
+
+            pulse = 0.98f + 0.02f * std::sin(animationClock.getElapsedTime().asSeconds() * 2.0f);
+            if (fontLoaded && showWelcome) {
+                mainText.setScale(pulse, pulse);
+                for (auto& layer : glassTextLayers) layer.setScale(pulse, pulse);
+            }
+
+            if (fontLoaded && !showWelcome && !showSelectedView && !battleMode && !showBattlePage) {
+                selectionText.setString("Selectionnes: " + std::to_string(selectedPokemon.size()) + "/" + std::to_string(MAX_SELECTION) + " (Entrée pour confirmer)");
+            }
+
+            window.clear();
+            if (backgroundTexture.getSize().x > 0) {
+                sf::Sprite backgroundSprite(backgroundTexture);
+                backgroundSprite.setScale(static_cast<float>(800) / backgroundTexture.getSize().x, static_cast<float>(600) / backgroundTexture.getSize().y);
+                window.draw(backgroundSprite);
+            } else {
+                window.clear(sf::Color(135, 206, 235));
+            }
+
+            if (showWelcome) {
+                mainText.setString("Bienvenue ! Appuyez sur Espace pour voir la grille Pokemon.");
+                sf::FloatRect textRect = mainText.getLocalBounds();
+                mainText.setOrigin(textRect.left + textRect.width / 2.0f, textRect.top + textRect.height / 2.0f);
+                mainText.setPosition(400.0f, 300.0f);
+                for (auto& layer : glassTextLayers) {
+                    layer.setString("Bienvenue ! Appuyez sur Espace pour voir la grille Pokemon.");
+                    layer.setPosition(402.0f, 302.0f);
+                }
+                if (fontLoaded) {
+                    for (const auto& layer : glassTextLayers) window.draw(layer);
+                    window.draw(mainText);
+                }
+            } else if (!selectionComplete && !showSelectedView && !battleMode && !showBattlePage) {
+                int numRows = (party.size() + COLS_PER_ROW - 1) / COLS_PER_ROW;
+                for (int row = 0; row < numRows; ++row) {
+                    float rowY = static_cast<float>(row * FRAME_SIZE) - scrollOffset;
+                    if (rowY >= -FRAME_SIZE && rowY <= 600.f) {
+                        for (int col = 0; col < COLS_PER_ROW; ++col) {
+                            int index = row * COLS_PER_ROW + col;
+                            if (index >= static_cast<int>(party.size())) break;
+                            auto p = party.get(index);
+                            if (p) {
+                                float xPos = static_cast<float>(col * FRAME_SIZE);
+                                float yPos = rowY;
+                                sf::RectangleShape frame(sf::Vector2f(FRAME_SIZE, FRAME_SIZE));
+                                frame.setPosition(xPos, yPos);
+                                frame.setFillColor(sf::Color::Transparent);
+                                frame.setOutlineColor(sf::Color::White);
+                                frame.setOutlineThickness(1.5f);
+                                window.draw(frame);
+
+                                sf::Sprite sprite(loadTexture(p->getNumero()));
+                                sprite.setPosition(xPos + (FRAME_SIZE - POKEMON_SIZE) / 2.f, yPos + (FRAME_SIZE - POKEMON_SIZE) / 2.f);
+                                sprite.setScale(POKEMON_SIZE / sprite.getTexture()->getSize().x, POKEMON_SIZE / sprite.getTexture()->getSize().y);
+                                window.draw(sprite);
+
+                                auto it = std::find(selectedPokemon.begin(), selectedPokemon.end(), p);
+                                if (it != selectedPokemon.end()) {
+                                    sf::Text tick("✔", font, 28);
+                                    tick.setFillColor(sf::Color::Green);
+                                    tick.setOutlineColor(sf::Color::Black);
+                                    tick.setOutlineThickness(1.0f);
+                                    sf::FloatRect tickRect = tick.getLocalBounds();
+                                    tick.setPosition(xPos + FRAME_SIZE - 25.f - tickRect.width / 2.f, yPos + 10.f - tickRect.height / 2.f);
+                                    window.draw(tick);
+                                }
+                                sf::Text idText("#" + std::to_string(p->getNumero()), font, 18);
+                                idText.setFillColor(sf::Color::White);
+                                idText.setPosition(xPos + (FRAME_SIZE - idText.getLocalBounds().width) / 2.f, yPos + 5.f);
+                                window.draw(idText);
+                                sf::Text nameText(p->getNom(), font, 18);
+                                nameText.setFillColor(sf::Color::White);
+                                nameText.setPosition(xPos + (FRAME_SIZE - nameText.getLocalBounds().width) / 2.f, yPos + 25.f);
+                                window.draw(nameText);
+                            }
+                        }
                     }
                 }
 
-                // Draw attack slots
-                for (int i = 0; i < 6; ++i) {
-                    sf::RectangleShape slot(sf::Vector2f(128.f, 64.f));
-                    slot.setPosition(400.f, 50.f + static_cast<float>(i * 80));
-                    slot.setFillColor(sf::Color::Transparent);
-                    slot.setOutlineColor(sf::Color::White);
-                    slot.setOutlineThickness(2.f);
-                    window.draw(slot);
-                    auto p = attack->get(i);
-                    if (p) {
-                        sf::Sprite sprite(loadTexture(p->getNumero()));
-                        sprite.setPosition(410.f, 55.f + static_cast<float>(i * 80));
-                        sprite.setScale(1.5f, 1.5f);
-                        window.draw(sprite);
-                    }
+                if (fontLoaded) {
+                    window.draw(selectionText);
                 }
+
+                if (showTooltip && fontLoaded) {
+                    sf::FloatRect tooltipRect = tooltip.getLocalBounds();
+                    sf::RectangleShape tooltipBg(sf::Vector2f(tooltipRect.width + 20, tooltipRect.height + 10));
+                    tooltipBg.setPosition(tooltip.getPosition());
+                    tooltipBg.setFillColor(sf::Color(0, 0, 0, 120));
+                    tooltipBg.setOutlineColor(sf::Color::White);
+                    tooltipBg.setOutlineThickness(1.f);
+                    window.draw(tooltipBg);
+                    window.draw(tooltip);
+                }
+            } else if (showSelectedView) {
+                mainText.setString("Votre Equipe Selectionnee (6 Pokemon)");
+                sf::FloatRect textRect = mainText.getLocalBounds();
+                mainText.setOrigin(textRect.left + textRect.width / 2.0f, textRect.top + textRect.height / 2.0f);
+                mainText.setPosition(400.0f, 40.0f);
+                window.draw(mainText);
+
+                const int SELECTED_COLS = 3;
+                const int SELECTED_ROWS = 2;
+                const float SELECTED_SPACING = 20.f;
+                const float SELECTED_FRAME_SIZE = 150.f;
+                const float SELECTED_START_X = (800.f - (SELECTED_COLS * SELECTED_FRAME_SIZE + (SELECTED_COLS - 1) * SELECTED_SPACING)) / 2.f;
+                const float SELECTED_START_Y = 120.f;
+                for (size_t i = 0; i < selectedPokemon.size(); ++i) {
+                    int row = i / SELECTED_COLS;
+                    int col = i % SELECTED_COLS;
+                    float xPos = SELECTED_START_X + col * (SELECTED_FRAME_SIZE + SELECTED_SPACING);
+                    float yPos = SELECTED_START_Y + row * (SELECTED_FRAME_SIZE + SELECTED_SPACING);
+
+                    sf::RectangleShape frame(sf::Vector2f(SELECTED_FRAME_SIZE, SELECTED_FRAME_SIZE));
+                    frame.setPosition(xPos, yPos);
+                    frame.setFillColor(sf::Color::Transparent);
+                    frame.setOutlineColor(sf::Color::Green);
+                    frame.setOutlineThickness(3.f);
+                    window.draw(frame);
+
+                    sf::Sprite sprite(loadTexture(selectedPokemon[i]->getNumero()));
+                    float selectedPokemonSize = 120.f;
+                    sprite.setPosition(xPos + (SELECTED_FRAME_SIZE - selectedPokemonSize) / 2.f, yPos + (SELECTED_FRAME_SIZE - selectedPokemonSize) / 2.f);
+                    sprite.setScale(selectedPokemonSize / sprite.getTexture()->getSize().x, selectedPokemonSize / sprite.getTexture()->getSize().y);
+                    window.draw(sprite);
+
+                    sf::Text numText("#" + std::to_string(selectedPokemon[i]->getNumero()), font, 18);
+                    numText.setFillColor(sf::Color::White);
+                    numText.setPosition(xPos + (SELECTED_FRAME_SIZE - numText.getLocalBounds().width) / 2.f, yPos + 5.f);
+                    window.draw(numText);
+                    sf::Text nameText(selectedPokemon[i]->getNom(), font, 18);
+                    nameText.setFillColor(sf::Color::White);
+                    nameText.setPosition(xPos + (SELECTED_FRAME_SIZE - nameText.getLocalBounds().width) / 2.f, yPos + 25.f);
+                    window.draw(nameText);
+                }
+
+                sf::Text instrText("Appuyez sur Espace pour lancer le combat avec cette equipe.", font, 24);
+                instrText.setFillColor(sf::Color::Yellow);
+                sf::FloatRect instrRect = instrText.getLocalBounds();
+                instrText.setOrigin(instrRect.left + instrRect.width / 2.0f, instrRect.top + instrRect.height / 2.0f);
+                instrText.setPosition(400.0f, 520.0f);
+                window.draw(instrText);
+            } else if (battleMode && battleSystem) {
+                if (fontLoaded) {
+                    window.draw(battleBackground);
+                }
+
+                battleSystem->render(window, textures);
+
+                if (fontLoaded) {
+                    playerPokemonText.setString("Votre Pokémon");
+                    opponentPokemonText.setString("Pokémon adverse");
+                    window.draw(playerPokemonText);
+                    window.draw(opponentPokemonText);
+                }
+
+                if (battleSystem->isBattleOver()) {
+                    battleMode = false;
+                    showBattlePage = true;
+                }
+            } else if (showBattlePage) {
+                if (backgroundTexture.getSize().x > 0) {
+                    sf::Sprite backgroundSprite(backgroundTexture);
+                    backgroundSprite.setScale(static_cast<float>(800) / backgroundTexture.getSize().x, static_cast<float>(600) / backgroundTexture.getSize().y);
+                    window.draw(backgroundSprite);
+                } else {
+                    window.clear(sf::Color(135, 206, 235));
+                }
+
+                sf::RectangleShape battlePageFrame(sf::Vector2f(600.f, 400.f));
+                battlePageFrame.setPosition(100.f, 100.f);
+                battlePageFrame.setFillColor(sf::Color(0, 0, 0, 150));
+                battlePageFrame.setOutlineColor(sf::Color::Yellow);
+                battlePageFrame.setOutlineThickness(4.f);
+                window.draw(battlePageFrame);
+
+                Pokemon* winner = nullptr;
+                Pokemon* loser = nullptr;
+                if (battleSystem && !battleSystem->getAttackButtons().empty()) {
+                    winner = selectedPokemon[0];
+                    loser = opponentParty.get(0);
+                }
+
+                float yPos = 150.f;
+                sf::Text titleText("Résultat du Combat", font, 30);
+                titleText.setFillColor(sf::Color::Yellow);
+                titleText.setOutlineColor(sf::Color::Black);
+                titleText.setOutlineThickness(2.f);
+                titleText.setOrigin(titleText.getLocalBounds().width / 2, 0);
+                titleText.setPosition(400.f, yPos - 40.f);
+                window.draw(titleText);
+
+                const float frameWidth = 250.f;
+                const float frameHeight = 200.f;
+                const float verticalSpacing = 10.f;
+
+                if (winner) {
+                    sf::RectangleShape winnerFrame(sf::Vector2f(frameWidth, frameHeight));
+                    winnerFrame.setPosition(150.f, yPos);
+                    winnerFrame.setFillColor(sf::Color(0, 0, 0, 100));
+                    winnerFrame.setOutlineColor(sf::Color::Green);
+                    winnerFrame.setOutlineThickness(3.f);
+                    window.draw(winnerFrame);
+
+                    sf::Sprite winnerSprite(loadTexture(winner->getNumero()));
+                    winnerSprite.setScale(1.0f, 1.0f);
+                    winnerSprite.setPosition(180.f, yPos + verticalSpacing);
+                    window.draw(winnerSprite);
+
+                    sf::Text winnerLabel("Gagnant", font, 20);
+                    winnerLabel.setFillColor(sf::Color::Green);
+                    winnerLabel.setOutlineColor(sf::Color::Black);
+                    winnerLabel.setOutlineThickness(1.f);
+                    winnerLabel.setPosition(150.f + 10.f, yPos + verticalSpacing - 20.f);
+                    window.draw(winnerLabel);
+
+                    sf::Text winnerText(winner->getNom() + " (#" + std::to_string(winner->getNumero()) +
+                                      ", ATK: " + std::to_string(winner->getAttaque()) + ")", font, 16);
+                    winnerText.setFillColor(sf::Color::White);
+                    winnerText.setOutlineColor(sf::Color::Black);
+                    winnerText.setOutlineThickness(1.f);
+                    winnerText.setPosition(150.f + 10.f, yPos + frameHeight - 50.f);
+                    window.draw(winnerText);
+                }
+
+                if (loser) {
+                    sf::RectangleShape loserFrame(sf::Vector2f(frameWidth, frameHeight));
+                    loserFrame.setPosition(400.f, yPos);
+                    loserFrame.setFillColor(sf::Color(0, 0, 0, 100));
+                    loserFrame.setOutlineColor(sf::Color::Red);
+                    loserFrame.setOutlineThickness(3.f);
+                    window.draw(loserFrame);
+
+                    sf::Sprite loserSprite(loadTexture(loser->getNumero()));
+                    loserSprite.setScale(1.0f, 1.0f);
+                    loserSprite.setPosition(430.f, yPos + verticalSpacing);
+                    window.draw(loserSprite);
+
+                    sf::Text loserLabel("Perdu", font, 20);
+                    loserLabel.setFillColor(sf::Color::Red);
+                    loserLabel.setOutlineColor(sf::Color::Black);
+                    loserLabel.setOutlineThickness(1.f);
+                    loserLabel.setPosition(400.f + 10.f, yPos + verticalSpacing - 20.f);
+                    window.draw(loserLabel);
+
+                    sf::Text loserText(loser->getNom() + " (#" + std::to_string(loser->getNumero()) +
+                                     ", ATK: " + std::to_string(loser->getAttaque()) + ")", font, 16);
+                    loserText.setFillColor(sf::Color::White);
+                    loserText.setOutlineColor(sf::Color::Black);
+                    loserText.setOutlineThickness(1.f);
+                    loserText.setPosition(400.f + 10.f, yPos + frameHeight - 50.f);
+                    window.draw(loserText);
+                }
+
+                sf::Text returnText("Appuyez sur Espace pour revenir", font, 20);
+                returnText.setFillColor(sf::Color::White);
+                returnText.setOutlineColor(sf::Color::Black);
+                returnText.setOutlineThickness(1.f);
+                returnText.setOrigin(returnText.getLocalBounds().width / 2, returnText.getLocalBounds().height / 2);
+                returnText.setPosition(400.f, 540.f);
+                window.draw(returnText);
             }
 
             window.display();
         }
 
-        delete attack;
+        delete battleSystem;
         Pokedex::destroyInstance();
     } catch (const std::exception& e) {
         std::cerr << "Erreur fatale : " << e.what() << std::endl;
-        std::cout << "Appuyez sur Entrée pour quitter..." << std::endl;
         std::cin.get();
         return 1;
     }

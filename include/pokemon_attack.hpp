@@ -8,4 +8,5 @@ public:
     void reintegrate(PokemonParty& party);
     void add(Pokemon* p) override;
     Pokemon* remove(int index) override;
+    void clear();
 };

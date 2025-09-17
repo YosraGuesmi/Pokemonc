@@ -15,12 +15,12 @@ public:
 private:
     PokemonAttack* playerTeam;
     Pokedex& pokedex;
-    Pokemon* playerPokemon; // Pokémon actuel du joueur
-    Pokemon* enemyPokemon;  // Pokémon ennemi
-    int playerIndex;        // Index du Pokémon actuel dans l'équipe
-    bool playerTurn;        // Tour du joueur ou de l'ennemi
-    sf::RectangleShape playerHPBar, enemyHPBar; // Barres de PV
-    sf::Text actionText;    // Texte pour les actions
-    sf::Text playerInfo, enemyInfo; // Infos sur les PV
-    bool battleActive;      // Indique si la bataille est en cours
+    Pokemon* playerPokemon;
+    Pokemon* enemyPokemon;
+    int playerIndex;
+    bool playerTurn;
+    sf::RectangleShape playerHPBar, enemyHPBar;
+    sf::Text actionText;
+    sf::Text playerInfo, enemyInfo;
+    bool battleActive;
 };

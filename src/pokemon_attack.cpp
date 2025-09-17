@@ -1,17 +1,16 @@
 #include "pokemon_attack.hpp"
-#include <algorithm>  // Déjà présent
+#include <algorithm>  // Already present
 
 PokemonAttack* PokemonAttack::fromParty(const PokemonParty& party) {
     auto* attack = new PokemonAttack();
-    size_t count = std::min(static_cast<size_t>(6), party.size());  // Cast pour matcher types
+    size_t count = std::min(static_cast<size_t>(6), party.size());
     for (size_t i = 0; i < count; ++i) {
         Pokemon* orig = party.get(static_cast<int>(i));
-        if (orig) attack->add(new Pokemon(*orig));  // Copie profonde
+        if (orig) attack->add(new Pokemon(*orig));
     }
     return attack;
 }
 
-// Reste du code inchangé
 void PokemonAttack::reintegrate(PokemonParty& party) {
     for (auto p : pokemons) {
         party.add(p);
@@ -30,4 +29,11 @@ Pokemon* PokemonAttack::remove(int index) {
     Pokemon* p = pokemons[index];
     pokemons.erase(pokemons.begin() + index);
     return p;
+}
+
+void PokemonAttack::clear() {
+    for (Pokemon* p : pokemons) {
+        delete p;
+    }
+    pokemons.clear();
 }

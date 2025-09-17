@@ -1,11 +1,9 @@
 #pragma once
 #include <SFML/Graphics.hpp>
-#include "../include/pokedex.hpp"
 #include "../include/pokemon_party.hpp"
 #include <vector>
 #include <map>
 #include <string>
-#include <random>
 
 class BattleSystem {
 public:
@@ -17,7 +15,7 @@ public:
     const std::vector<sf::Text>& getAttackButtons() const { return attackButtons; }
 
 private:
-    // Structure interne pour simuler une attaque
+
     struct Attack {
         std::string name;
         std::string type;
@@ -25,7 +23,7 @@ private:
         Attack(const std::string& n, const std::string& t, int p) : name(n), type(t), power(p) {}
     };
 
-    // Équipes
+
     std::vector<Pokemon*> playerTeam;
     std::vector<Pokemon*> opponentTeam;
     Pokemon* activePlayerPokemon;
@@ -33,7 +31,6 @@ private:
     int currentPlayerIndex;
     int currentOpponentIndex;
 
-    // Interface graphique
     sf::Font& font;
     sf::Text battleMessageText;
     std::vector<sf::Text> attackButtons;
@@ -43,12 +40,12 @@ private:
     sf::Text opponentHPText;
     int selectedAttack;
 
-    // Logique du combat
+
     std::string battleMessage;
     bool playerTurn;
     bool battleOver;
 
-    // Table des types (simplifiée)
+
     std::map<std::string, std::map<std::string, float>> typeChart;
     void initializeTypeChart();
     float getTypeMultiplier(const std::string& attackType, const std::string& targetType);

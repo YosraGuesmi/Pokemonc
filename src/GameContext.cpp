@@ -2,7 +2,7 @@
 #include "State.hpp"
 
 GameContext::GameContext(int width, int height) : window(sf::VideoMode(width, height), "Pokemon Project") {
-    // Initialisation si nécessaire
+
 }
 
 void GameContext::setState(std::unique_ptr<State> state) {

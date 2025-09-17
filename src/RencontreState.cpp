@@ -8,11 +8,11 @@ void RencontreState::handleInput(GameContext& context, sf::Event event) {
 }
 
 void RencontreState::update(GameContext& context) {
-    // Logique de mise à jour si nécessaire
+
 }
 
 void RencontreState::render(GameContext& context, sf::RenderWindow& window) {
-    window.clear(sf::Color::Green); // Couleur d'exemple
+    window.clear(sf::Color::Green);
     if (context.getFont() && context.getMainText()) {
         window.draw(*context.getMainText());
     }

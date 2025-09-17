@@ -15,18 +15,18 @@ class GameContext {
 public:
     GameContext(int width, int height);
     void setState(std::unique_ptr<State> state);
-    std::unique_ptr<State> getState() { return std::move(currentState); } // Nouvelle méthode
+    std::unique_ptr<State> getState() { return std::move(currentState); }
     void handleEvents();
     void update();
     void render();
     bool isWindowOpen() const;
     sf::RenderWindow& getWindow();
 
-    // Méthodes pour partager les données
+
     void setParty(PokemonParty* p) { party = p; }
     void setAttack(PokemonAttack* a) { attack = a; }
     void setTextures(std::map<int, sf::Texture>* t) { textures = t; }
-    void setLoadTexture(std::function<sf::Texture&(int)>& lt) { loadTexture = lt; } // Garde la signature actuelle
+    void setLoadTexture(std::function<sf::Texture&(int)>& lt) { loadTexture = lt; }
     void setFont(sf::Font* f) { font = f; }
     void setBackgroundTexture(sf::Texture* bt) { backgroundTexture = bt; }
     void setMainText(sf::Text* mt) { mainText = mt; }
@@ -43,7 +43,7 @@ public:
     sf::Text* getTooltip() { return tooltip; }
     std::vector<sf::Text>* getGlassTextLayers() { return glassTextLayers; }
 
-    // Méthodes pour le drag-and-drop
+
     int* getDragIndex() { return &dragIndex; }
     void setDraggedPokemon(Pokemon* p) { draggedPokemon = p; }
     Pokemon* getDraggedPokemon() { return draggedPokemon; }
